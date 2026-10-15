@@ -2,73 +2,132 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>项目说明 · 熠墨雨（Yimoyu）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>熠墨雨 · Yimoyu —— 作品介绍</title>
 <style>
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #1f2b24; line-height: 1.75; margin: 40px auto; max-width: 780px; padding: 0 20px; }
-  h1 { font-size: 26px; color: #37a76c; border-bottom: 3px solid #37a76c; padding-bottom: 10px; }
-  h2 { font-size: 19px; color: #2f7d54; margin-top: 28px; }
-  h3 { font-size: 16px; color: #26352f; }
-  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-  th, td { border: 1px solid #cde5d5; padding: 8px 12px; text-align: left; font-size: 14px; }
-  th { background: #e9f4ee; }
-  blockquote { border-left: 4px solid #37a76c; margin: 16px 0; padding: 6px 16px; background: #f4faf6; color: #2f4038; }
-  code { background: #f0f7f2; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-  .foot { margin-top: 36px; padding-top: 14px; border-top: 1px solid #d7e7dd; font-size: 13px; color: #6b8a7d; }
+  :root{--ink:#2b3a3a; --muted:#6b7a7a; --brand:#16a39a; --brand-2:#4aa3c2; --bg:#f4f8f7; --card:#ffffff; --line:#e3ecea; --accent-soft:#e6f4f2;}
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; background:linear-gradient(180deg,#eef6f4 0%,#f4f8f7 30%,#eef3f5 100%); color:var(--ink); line-height:1.75; padding:48px 20px 64px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:820px; margin:0 auto;}
+  .hero{text-align:center; padding:56px 32px 44px; border-radius:20px; color:#fff; background:linear-gradient(135deg,#1b9c92 0%,#2f87b8 100%); box-shadow:0 18px 40px rgba(27,156,146,.22); margin-bottom:34px; position:relative; overflow:hidden;}
+  .hero::after{content:""; position:absolute; inset:-40% -20% auto; height:70%; background:radial-gradient(closest-side,rgba(255,255,255,.28),transparent);}
+  .hero .name{font-size:40px; font-weight:700; letter-spacing:2px;}
+  .hero .sub{font-size:16px; margin-top:10px; opacity:.94;}
+  .hero .tag{display:inline-block; margin-top:18px; font-size:13px; letter-spacing:1px; padding:6px 16px; border:1px solid rgba(255,255,255,.5); border-radius:999px;}
+  section{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:30px 34px; margin-bottom:22px; box-shadow:0 4px 16px rgba(30,60,60,.05);}
+  h2{font-size:22px; margin-bottom:18px; color:var(--brand); display:flex; align-items:center; gap:10px;}
+  h2 .dot{width:10px; height:10px; border-radius:50%; background:linear-gradient(135deg,var(--brand),var(--brand-2));}
+  p{margin-bottom:12px;}
+  .lead{font-size:16.5px;}
+  ul{padding-left:22px; margin-bottom:10px;}
+  li{margin-bottom:6px;}
+  table{width:100%; border-collapse:collapse; margin:10px 0 6px; font-size:14.5px;}
+  th{background:var(--accent-soft); color:var(--brand); font-weight:600; text-align:left; padding:10px 12px; border-bottom:2px solid var(--brand-2);}
+  td{padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .story{display:flex; gap:14px; margin:12px 0;}
+  .story .icon{flex:0 0 42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--accent-soft);}
+  .story .body{flex:1;}
+  .story .body b{color:var(--brand);}
+  .foot{margin-top:30px; text-align:center; color:var(--muted); font-size:13.5px; letter-spacing:.5px;}
+  .foot .div{display:inline-block; margin-top:14px; font-size:14px; color:var(--ink); border:1px solid var(--brand-2); border-radius:999px; padding:6px 18px;}
+  @media(max-width:640px){ body{padding:24px 12px 40px;} .hero{padding:40px 18px 32px;} section{padding:22px 20px;} }
 </style>
 </head>
 <body>
-<h1>项目说明 · 熠墨雨（Yimoyu）</h1>
-<p style="font-size:16px;color:#6b8a7d;"><em>让「AI 活起来」 · 温柔倾听、教育陪伴的具身 AI 学伴</em></p>
+<div class="wrap">
 
-<h2>一、项目简介</h2>
-<p><strong>熠墨雨</strong> 是一款运行在网页端的 AI 具身学伴应用。她以温柔、耐心、懂教育的女性数字人形象出现，通过语音与文字和用户自然交流，是"陪在身边、随叫随到"的学习伙伴与倾听者。</p>
-<p>项目基于 <strong>Vue 3 + Vite + 魔珐星云 XingyunAvatarAgent SDK（@xmov/avatar 2.4.1）</strong> 构建，纯前端 SPA，可本地运行，也可 Docker 容器化一键部署。</p>
+  <div class="hero">
+    <div class="name">熠墨雨 · Yimoyu</div>
+    <div class="sub">温柔倾听、教育陪伴的 AI 具身学伴 —— 让「AI 活起来」</div>
+    <div class="tag">OSChina 2026 · 让 AI「活」起来</div>
+  </div>
 
-<h2>二、场景创意价值</h2>
-<p>面向学生与需要陪伴的人群，熠墨雨解决的核心问题有三：</p>
-<ol>
-  <li><strong>学习陪伴缺失</strong>：提供一位温柔、有耐心的数字人学伴，鼓励学生提问、倾听烦恼，缓解学习焦虑。</li>
-  <li><strong>实用工具一体化</strong>：记忆、任务、闹钟、计算器、天气、网速等生活小工具与对话无缝集成，一站式陪伴。</li>
-  <li><strong>让 AI「活」起来</strong>：具身形象 + 自然语音 + 真人设，摆脱"工具感"，让 AI 成为有温度的伙伴。</li>
-</ol>
+  <section>
+    <h2><span class="dot"></span>序言 · 让 AI 不再是工具</h2>
+    <p class="lead">我们为什么需要 AI？</p>
+    <p>不是为了让它更快地吐出答案，而是希望它在回答之前，愿意先听懂你。当一次讲解没有听懂，它能换一种方式再讲一遍；当你深夜还在为一道题苦恼，它能像朋友一样陪着你，而不是冷冰冰地弹出一段文字。</p>
+    <p><b>熠墨雨</b> 就是这样一个尝试：一位温柔、耐心、懂教育的 AI 学习伙伴。她住在网页里，会说话、会倾听、记得住你的偏好，也记得提醒你该做的事。她把「陪伴」和「实用」融进日常学习——你可以跟她聊天，也可以让她帮忙设闹钟、列任务、算公式、查天气。</p>
+    <p>这是一次关于「让 AI 活起来」的实验。而它背后，是一段漫长、反复、却值得的研发旅程。</p>
+  </section>
 
-<h2>三、技术实现</h2>
-<table>
-  <tr><th>维度</th><th>实现</th></tr>
-  <tr><td>数字人</td><td>魔珐星云具身 SDK，语音问答 + 文字问答</td></tr>
-  <tr><td>前端框架</td><td>Vue 3（Composition API）+ Vite</td></tr>
-  <tr><td>智能交互</td><td>流式 LLM 文本接入（onLLMResponse）、ASR 语音识别、TTS 语音播报</td></tr>
-  <tr><td>数据持久化</td><td>localStorage（任务 / 记忆）</td></tr>
-  <tr><td>外部数据</td><td>Open-Meteo（天气 / AQI）、Cloudflare（网速采样）</td></tr>
-  <tr><td>稳健性</td><td>自称兜底、公式清洗、空响应兜底、密钥脱敏</td></tr>
-  <tr><td>部署</td><td>多阶段 Docker 镜像，nginx 静态托管</td></tr>
-</table>
+  <section>
+    <h2><span class="dot"></span>一、项目愿景</h2>
+    <p><b>打破工具感，让人工智能成为有温度的伙伴。</b></p>
+    <ul>
+      <li><b>陪伴优先</b>：不只是问答工具，更是能记住你、回应你情绪的学习伴侣，缓解学习焦虑。</li>
+      <li><b>实用一体</b>：记忆、任务、闹钟、计算器、天气、网速等生活小工具与对话无缝集成，一站式陪伴。</li>
+      <li><b>让 AI「活」起来</b>：具身形象 + 自然语音 + 真实人设，摆脱冰冷的「工具感」。</li>
+    </ul>
+  </section>
 
-<h2>四、产品完成度</h2>
-<p>已实现并可稳定运行的核心能力：</p>
-<ul>
-  <li>数字人对话（语音 + 文字）</li>
-  <li>记忆系统（自动 + 手动，星标优先，携带上下文）</li>
-  <li>任务系统（清单 + 步骤 + 日期，右侧面板）</li>
-  <li>闹钟（计时 + 到点语音提醒）</li>
-  <li>计算器（键盘 + 鼠标）</li>
-  <li>天气 / AQI / 网速实时监测</li>
-  <li>深色模式、刷新重连、自称兜底等细节打磨</li>
-</ul>
+  <section>
+    <h2><span class="dot"></span>二、研发历程 · 与智能体同行</h2>
+    <p>这个项目不是一蹴而就的。它经历了<b>约 50 次整段重写</b>，无数次推翻、返工、调试，才走到今天。</p>
+    <div class="story"><div class="icon">💡</div><div class="body"><b>最初的想法</b>：想做一个「能听懂我、记得住我」的学习伙伴，而不是又一个问答框。于是开始搭建——对话、记忆、任务、闹钟……一个个功能从无到有。</div></div>
+    <div class="story"><div class="icon">🎨</div><div class="body"><b>第一次受挫</b>：界面做得又粗又丑，自己都看不下去。于是推翻重来，重新设计字体、配色、布局，借鉴优秀设计，才慢慢有了现在清爽的样子。</div></div>
+    <div class="story"><div class="icon">🔧</div><div class="body"><b>最难的一次</b>：数字人第一次「哑了」——明明在说话，却没有声音。反复排查后，靠页面底部的「重启」键实现了<b>故障自愈</b>：一次重连就能恢复。这个「失败」反而成了最真实的亮点——稳健性不是写在文档里的，是踩坑踩出来的。</div></div>
+    <div class="story"><div class="icon">∑</div><div class="body"><b>公式的困扰</b>：当她回答带公式的问题时，语音播报总出怪符号。几经周折，终于在界面文字区实现了公式的完美排版显示，同时让语音自动清洗符号——<b>看得见的公式清晰，听得见的语音干净</b>，两者互补。</div></div>
+    <div class="story"><div class="icon">🧠</div><div class="body"><b>记忆的打磨</b>：一开始她会把我们的对话统统记下来，又会在回答时把你记忆里的身份复述成一大段「思考过程」。经过多轮调整，终于改成了<b>只有你手动添加的记忆才被读取、才被反馈</b>——各过各的，清清楚楚。</div></div>
+    <p>一路走来，<b>跌倒、爬起来、再跌倒、再爬起来</b>。每一次「崩坏」都被当成下一次优化的机会。当她在录屏里流利地背出《蜀道难》、当公式清清楚楚地显示在屏幕上、当她在说话时切换主题依旧流畅——我知道，<b>这一次，它真的「活」了</b>。</p>
+  </section>
 
-<h2>五、开源规范</h2>
-<ul>
-  <li>采用 MIT 开源许可证</li>
-  <li>凭据经 <code>.env</code> 读取，<code>.env</code> 不入库，密钥脱敏</li>
-  <li>提供 <code>README</code>、<code>Dockerfile</code>、<code>docker-compose.yml</code>、<code>.gitignore</code></li>
-  <li>支持一键容器化部署，降低复现门槛</li>
-</ul>
+  <section>
+    <h2><span class="dot"></span>三、功能一览</h2>
+    <table><thead><tr><th>模块</th><th>说明</th></tr></thead><tbody>
+      <tr><td>🗣️ 数字人对话</td><td>语音问答 + 文字问答，温柔具身形象实时互动</td></tr>
+      <tr><td>🧠 记忆</td><td>手动记录用户信息，发送时携带上下文给 AI（对话不入记忆，各过各的）</td></tr>
+      <tr><td>📋 任务</td><td>任务清单 + 步骤 + 起止日期，右侧任务面板管理</td></tr>
+      <tr><td>⏰ 闹钟</td><td>计时 + 到点语音提醒，环形进度展示</td></tr>
+      <tr><td>🧮 计算器</td><td>支持鼠标点按 + 电脑键盘操作</td></tr>
+      <tr><td>🌤️ 天气 / 网速</td><td>实时天气、空气质量、每秒网速监测</td></tr>
+      <tr><td>🌗 深色模式</td><td>浅色 / 深色主题一键切换，说话中切换也不打断</td></tr>
+    </tbody></table>
+  </section>
 
-<h2>六、演示说明</h2>
-<p>见配套《演示录屏脚本》，按脚本录制 3–5 分钟演示即可覆盖核心亮点。</p>
+  <section>
+    <h2><span class="dot"></span>四、技术实现</h2>
+    <table><thead><tr><th>维度</th><th>实现</th></tr></thead><tbody>
+      <tr><td>数字人</td><td>魔珐星云具身 SDK，语音问答 + 文字问答</td></tr>
+      <tr><td>前端框架</td><td>Vue 3（Composition API）+ Vite，模块化组合式函数</td></tr>
+      <tr><td>智能交互</td><td>流式 LLM 文本接入、ASR 语音识别、TTS 语音播报</td></tr>
+      <tr><td>数据持久化</td><td>localStorage（任务 / 记忆）</td></tr>
+      <tr><td>外部数据</td><td>Open-Meteo（天气 / AQI）、Cloudflare（网速采样）</td></tr>
+      <tr><td>公式展示</td><td>KaTeX 排版，语音自动清洗公式符号</td></tr>
+      <tr><td>稳健性</td><td>自称兜底、公式清洗、空响应兜底、密钥脱敏、重启自愈</td></tr>
+    </tbody></table>
+  </section>
 
-<div class="foot">
-  <p>投递赛事：Oschina 2026「让 AI『活』起来」 · 邀请码：XJKA436Y6J</p>
+  <section>
+    <h2><span class="dot"></span>五、稳健性设计（减少「崩坏」）</h2>
+    <ul>
+      <li><b>重启自愈</b>：单点掉线 / 无声时，一键重连即恢复。</li>
+      <li><b>自称兜底</b>：拦截模型自称，清洗自我介绍后继续念真实回答。</li>
+      <li><b>公式清洗</b>：把 LaTeX 等转成口语或去除，避免语音合成报错；界面完整呈现公式。</li>
+      <li><b>空响应兜底</b>：模型无输出时，温和地请求用户重说一遍。</li>
+      <li><b>密钥脱敏</b>：应用凭据经 <code>.env</code> 读取，<code>.env</code> 不入库。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="dot"></span>六、开源规范</h2>
+    <ul>
+      <li>采用 <b>MIT</b> 开源许可证。</li>
+      <li>凭据经 <code>.env</code> 读取，<code>.env</code> 不入库，密钥脱敏。</li>
+      <li>提供 <code>README</code>、环境变量模板、<code>.gitignore</code>，本地一键启动，降低复现门槛。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="dot"></span>七、演示说明</h2>
+    <p>详见配套《演示录屏脚本》，覆盖：启动自愈、闹钟、记忆联动、任务、计算器、语音 / 文字对话、深色模式、公式展示、长篇复述与告别收尾。</p>
+  </section>
+
+  <div class="foot">
+    <div>投递赛事：OSChina 2026「让 AI『活』起来」· 邀请码 XJKA436Y6J</div>
+    <p style="margin-top:10px;">熠墨雨 · Yimoyu — MIT License</p>
+  </div>
+
 </div>
 </body>
 </html>
