@@ -156,7 +156,19 @@ export function useAvatar({ carryMemory, buildContext, rememberAuto, pushSys }) 
     const text = inputText.value
     inputText.value = ''
     rememberAuto(text)
-    const payload = carryMemory.value ? buildContext() + text : text
+    let payload = text
+    if (carryMemory.value) {
+      const ctx = buildContext()
+      if (ctx) {
+        // 记忆作为「已确认背景」注入，并明确要求直接回答、不输出推理。
+        // 避免模型把记忆当“待分析的问题”，从而吐出大段思考过程（用户已反馈该问题）。
+        payload =
+          '以下是关于用户的已确认背景信息（这不是用户此刻的问题，仅供你直接运用，无需再确认或分析）：\n' +
+          ctx +
+          '\n请直接针对用户刚才的问题，用简洁、自然、口语化的方式回答。不要复述或解释上面的背景，也不要说“根据记忆”“结合记忆”“我知道”这类开场白。\n用户问：' +
+          text
+      }
+    }
     try { await agent.value?.ask(payload) } catch (e) {}
   }
 
