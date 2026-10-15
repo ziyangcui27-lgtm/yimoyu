@@ -5,7 +5,7 @@
 **熠墨雨** 是一个运行在网页端的数字人陪伴应用：一位温柔、耐心、懂教育的 AI 学习伙伴，通过语音和文字与用户自然交流，同时内置记忆、任务、闹钟、计算器、天气、网速等贴心小工具，把「陪伴」和「实用」融进日常学习生活。
 
 - 技术栈：Vue 3 + Vite + @xmov/avatar（魔珐星云 XingyunAvatarAgent SDK）
-- 运行方式：纯前端 SPA，支持本地开发与 Docker 容器化部署
+- 运行方式：纯前端 SPA，本地开发即用
 - 开源协议：MIT License
 
 ---
@@ -53,15 +53,6 @@ npm run dev
 | `VITE_APP_SECRET` | 魔珐星云应用密钥 |
 | `VITE_GATEWAY` | 网关地址（有默认值，一般无需修改） |
 
-## 🐳 Docker 部署
-
-```bash
-cp .env.example .env   # 先配好环境变量
-docker compose up -d --build
-```
-
-生产镜像通过 `nginx` 静态托管构建产物，默认端口映射 `8080 -> 80`，访问 `http://localhost:8080`。
-
 ## 📁 目录结构
 
 ```
@@ -82,8 +73,6 @@ yimoyu/
 ├── public/                # 静态资源
 ├── .env.example           # 环境变量模板
 ├── .gitignore
-├── Dockerfile             # 容器镜像
-├── docker-compose.yml
 ├── README.md
 └── LICENSE
 ```
