@@ -336,18 +336,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import XingyunAvatarAgent from '@xmov/avatar/agent'
-import { marked } from 'marked'
-import katex from 'katex'
-import 'katex/dist/katex.min.css'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { useClock } from './composables/useClock'
+import { useWeather } from './composables/useWeather'
+import { useSpeed } from './composables/useSpeed'
+import { useCalc } from './composables/useCalc'
+import { useMemory } from './composables/useMemory'
+import { useTasks } from './composables/useTasks'
+import { useAlarm } from './composables/useAlarm'
+import { useAvatar } from './composables/useAvatar'
 
+/* ============ 顶层界面状态 ============ */
 const view = ref('home')
-const stateText = ref('初始化中…')
-const micText = ref('开始说话')
-const inputText = ref('')
-const running = ref(false)
-const listening = ref(false)
 const dark = ref(false)
 const sidebarOpen = ref(false)
 const taskPanelOpen = ref(false)
@@ -356,466 +356,53 @@ const taskPanelOpen = ref(false)
 const sysMsgs = reactive([])
 function pushSys(line) { sysMsgs.push(line); if (sysMsgs.length > 20) sysMsgs.shift() }
 
-/* ============ AI 文字/公式回答展示区（语音外的文字交流） ============
-   语音播报只能念文本，公式等非文本内容在这里以 Markdown + LaTeX 渲染出来。 */
-const aiAnswer = ref('')
-// 行间公式 $$...$$ / \[...\] → 块级 KaTeX；行内公式 \(...\) 与 $...$ → 行内 KaTeX；其余走 Markdown
-function renderContent(t) {
-  if (!t) return ''
-  let out = t
-  out = out.replace(/\$\$([\s\S]+?)\$\$/g, (_, m) => {
-    try { return `<div class="math-block">${katex.renderToString(m, { displayMode: true, throwOnError: false, strict: false })}</div>` } catch (e) { return _ }
-  })
-  out = out.replace(/\\\[([\s\S]+?)\\\]/g, (_, m) => {
-    try { return `<div class="math-block">${katex.renderToString(m, { displayMode: true, throwOnError: false, strict: false })}</div>` } catch (e) { return _ }
-  })
-  out = out.replace(/\\\(([\s\S]+?)\\\)/g, (_, m) => {
-    try { return `<span class="math-inline">${katex.renderToString(m, { throwOnError: false, strict: false })}</span>` } catch (e) { return _ }
-  })
-  out = out.replace(/\$([^$\n]{1,80})\$/g, (_, m) => {
-    try { return `<span class="math-inline">${katex.renderToString(m, { throwOnError: false, strict: false })}</span>` } catch (e) { return _ }
-  })
-  return marked.parse(out)
-}
+/* ============ 功能模块（组合式函数，各自独立可维护） ============ */
+const clockApi = useClock()
+const weatherApi = useWeather()
+const speedApi = useSpeed()
+const calcApi = useCalc()
+const mem = useMemory()
+const tasksApi = useTasks()
+const avatar = useAvatar({
+  carryMemory: mem.carryMemory,
+  buildContext: mem.buildContext,
+  rememberAuto: mem.rememberAuto,
+  pushSys,
+})
+const alarmApi = useAlarm({ speak: (msg) => avatar.agent.value?.speak(msg) })
 
-/* ============ 兜底机制：减少崩坏、提高质量 ============
-   1. 自称拦截：只在回答开头（可带问候词）自称豆包/AI助手时触发；
-      拦截后清洗掉开头的自我介绍、继续念真实内容。
-      若整句就是自我介绍（问“你是谁”），则念固定句。
-      → 既不自称豆包，也不丢回答。
-   2. 公式清洗：把 LaTeX/$$ 等转成口语或去掉，避免 [SDK 2404] 报错。
-   3. 空响应兜底：完全没有输出时，念一句温和的请求重复。          */
-let llmBuffer = ''
-let fixing = false
-const FIXED_SELF = '我是熠墨雨，是你的学习助手和倾听者呀～'
-const FALLBACK_EMPTY = '抱歉呀，我刚才没听清，可以再说一遍吗～'
-const SELF_RE = /^(?:(?:你好|您好|嗨|哈喽)\s*[，,。!！~～]?\s*)?(?:我是|我叫|我是由)\s*(?:豆包|字节跳动|人工智能助手|AI助手|智能助手)/
+/* ============ 解构到模板可用的名字 ============ */
+const { nowStr, pad } = clockApi
+const { weather, weatherErr, weatherText, weatherIcon, aqi, aqiComputed } = weatherApi
+const { speedResult, sampling } = speedApi
+const { calc, openCalc, closeCalc, calcInput, calcDot, calcOp, calcEqual, calcPercent, calcNeg, calcBackspace, calcClear } = calcApi
+const { entries, editing, bodyRef, newTitle, carryMemory, memory, sortedEntries, addEntry, openMemory, closeMemory, openEditor, toggleStar, saveEdit, removeFromEditor, clearAll, onBodyKeydown, onTitleKeydown } = mem
+const { tasks, taskEditing, newTaskTitle, newStepText, addTask, openTaskEditor, saveTaskEdit, removeTaskFromEditor, addStep, taskDone, taskStat, dateRange } = tasksApi
+const { alarm, openAlarm, closeAlarm, adjust, startAlarm, togglePause, resetAlarm, fmtRemain, ringStyle } = alarmApi
+const { running, micText, inputText, aiAnswer, renderContent, toggleMic, sendAsk, onInterrupt } = avatar
 
-function isSelfClaimStart(text) {
-  return SELF_RE.test(text.replace(/\s+/g, '').slice(0, 24))
-}
-// 去掉开头那句自我介绍，保留后续真实内容
-function stripSelfClaim(text) {
-  const head = text.replace(/\s+/g, '').slice(0, 30)
-  if (!SELF_RE.test(head)) return text.trim()
-  const m = text.match(/(?:我是|我叫|我是由)[^。！!？?]*[。！!？?]/)
-  if (m) return text.slice(text.indexOf(m[0]) + m[0].length).trim()
-  return ''
-}
-// 把公式/特殊符号转成口语或去掉，避免平台 LaTeX / SSML 标签报错（[SDK 2404]）
-function speakClean(t) {
-  let s = t
-    .replace(/\$\$[\s\S]*?\$\$/g, ' ')
-    .replace(/\\\[[\s\S]*?\\\]/g, ' ')
-    .replace(/\\\([\s\S]*?\\\)/g, ' ')
-    .replace(/\$[^$\n]{1,160}\$/g, ' ')
-    .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '（$1 分之 $2）')
-    .replace(/\\[a-zA-Z]+\{[^}]*\}/g, ' ')
-    .replace(/\\[a-zA-Z]+/g, ' ')
-    .replace(/[{}\\]/g, ' ')
-  return s.replace(/[ \t]{2,}/g, ' ').trim().slice(0, 600)
-}
-function handleLLM(resp) {
-  if (resp.isFirst) { llmBuffer = ''; fixing = false; aiAnswer.value = '' }
-  if (resp.text) {
-    llmBuffer += resp.text
-    // 展示区：去自称、保留公式原文（不清洗公式，供阅读）
-    const shown = stripSelfClaim(llmBuffer)
-    aiAnswer.value = shown || (isSelfClaimStart(llmBuffer) ? FIXED_SELF : llmBuffer)
-    if (!fixing && isSelfClaimStart(llmBuffer)) {
-      fixing = true
-      try { agent?.interrupt() } catch (e) {}
-      setTimeout(() => {
-        const rest = stripSelfClaim(llmBuffer)
-        const final = rest ? speakClean(rest) : FIXED_SELF
-        try { agent?.speak(final) } catch (e) {}
-      }, 500)
-    }
-  }
-  if (resp.event === 'done' && !fixing && !llmBuffer.trim()) {
-    setTimeout(() => { try { agent?.speak(FALLBACK_EMPTY) } catch (e) {} }, 600)
-  }
-}
-
-/* ============ 记忆点 ============ */
-const entries = ref([])
-const editing = ref(null)
-const bodyRef = ref(null)
-const newTitle = ref('')
-const carryMemory = ref(true)
-const memory = reactive({ open: false })
-const BODY_LIMIT = 3000
-let idSeq = 1
-const sortedEntries = computed(() => [...entries.value].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0)))
-function newEntry(kind, title, body) { return { id: idSeq++, kind, title, body: body || '', starred: false } }
-function rememberAuto(text) {
-  if (!text || !text.trim()) return
-  const t = text.trim()
-  entries.value.unshift(newEntry('auto', t.length > 40 ? t.slice(0, 40) + '…' : t, t))
-}
-function addEntry() { const v = newTitle.value.trim(); if (!v) return; entries.value.unshift(newEntry('pref', v, '')); newTitle.value = '' }
-function openMemory() { memory.open = true }
-function closeMemory() { memory.open = false }
-function openEditor(en) { editing.value = en; nextTick(() => bodyRef.value?.focus()) }
-function toggleStar() { if (editing.value) editing.value.starred = !editing.value.starred }
-function saveEdit() {
-  if (editing.value) { if (!editing.value.title.trim()) editing.value.title = '（无标题）'; if (editing.value.body.length > BODY_LIMIT) editing.value.body = editing.value.body.slice(0, BODY_LIMIT) }
-  editing.value = null
-}
-function removeFromEditor() {
-  if (!editing.value) return
-  const i = entries.value.findIndex(e => e.id === editing.value.id)
-  if (i > -1) entries.value.splice(i, 1)
-  editing.value = null
-}
-function clearAll() { entries.value = [] }
-function insertAtCursor(el, text) {
-  const start = el.selectionStart ?? el.value.length
-  const end = el.selectionEnd ?? el.value.length
-  el.value = el.value.slice(0, start) + text + el.value.slice(end)
-  if (el.value.length > BODY_LIMIT) el.value = el.value.slice(0, BODY_LIMIT)
-  const pos = start + text.length
-  el.setSelectionRange(pos, pos)
-  el.dispatchEvent(new Event('input'))
-}
-function onBodyKeydown(e) {
-  if (e.key !== 'Enter') return
-  if (e.metaKey || e.ctrlKey) { e.preventDefault(); insertAtCursor(e.target, '\n') }
-  else { e.preventDefault(); saveEdit() }
-}
-function onTitleKeydown(e) { if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); saveEdit() } }
-function buildContext() {
-  const parts = []
-  const prefs = entries.value.filter(e => e.kind === 'pref')
-  if (prefs.length) parts.push('用户偏好：' + prefs.map(e => (e.starred ? '★' : '') + e.title + (e.body ? '：' + e.body : '')).join('；'))
-  const autos = entries.value.filter(e => e.kind === 'auto').slice(0, 10)
-  if (autos.length) parts.push('用户最近说过：' + autos.map(e => e.title).join(' / '))
-  return parts.length ? parts.join('\n') + '\n' : ''
-}
-
-/* ============ 任务 ============ */
-const tasks = ref([])
-const taskEditing = ref(null)
-const newTaskTitle = ref('')
-const newStepText = ref('')
-let taskIdSeq = 1001
-const TASK_KEY = 'yimoyu_tasks_v1'
-function loadTasks() {
-  try {
-    const raw = localStorage.getItem(TASK_KEY)
-    if (raw) { tasks.value = JSON.parse(raw); taskIdSeq = tasks.value.reduce((m, t) => Math.max(m, t.id), 1000) + 1 }
-  } catch (e) { tasks.value = [] }
-}
-function saveTasks() { try { localStorage.setItem(TASK_KEY, JSON.stringify(tasks.value)) } catch (e) {} }
-function addTask() {
-  const v = newTaskTitle.value.trim()
-  if (!v) return
-  tasks.value.unshift({ id: taskIdSeq++, title: v, startDate: '', endDate: '', steps: [] })
-  newTaskTitle.value = ''
-  saveTasks()
-}
+/* ============ 跨模块跳转（组件库入口） ============ */
 function openTaskPanel() { view.value = 'home'; taskPanelOpen.value = true }
-function openTaskEditor(t) { taskEditing.value = t; newStepText.value = '' }
-function saveTaskEdit() {
-  if (taskEditing.value) { if (!taskEditing.value.title.trim()) taskEditing.value.title = '（无标题）'; if (!taskEditing.value.startDate) taskEditing.value.startDate = ''; if (!taskEditing.value.endDate) taskEditing.value.endDate = '' }
-  taskEditing.value = null
-  saveTasks()
-}
-function removeTaskFromEditor() {
-  if (!taskEditing.value) return
-  const i = tasks.value.findIndex(t => t.id === taskEditing.value.id)
-  if (i > -1) tasks.value.splice(i, 1)
-  taskEditing.value = null
-  saveTasks()
-}
-function addStep() {
-  const v = newStepText.value.trim()
-  if (!v || !taskEditing.value) return
-  taskEditing.value.steps.push({ text: v, done: false })
-  newStepText.value = ''
-}
-const taskDone = computed(() => taskEditing.value ? taskEditing.value.steps.filter(s => s.done).length : 0)
-const taskStat = computed(() => {
-  let d = 0, t = 0
-  tasks.value.forEach(x => { d += x.steps.filter(s => s.done).length; t += x.steps.length })
-  return `${d}/${t} 完成`
-})
-function dateRange(t) {
-  const s = t.startDate || '—'
-  const e = t.endDate || '—'
-  return `${s} — ${e}`
-}
+function openAlarmFromHome() { view.value = 'components'; alarmApi.openAlarm() }
+function reloadPage() { avatar.reloadPage() }
 
-/* ============ 计算器 ============ */
-const calc = reactive({ open: false, display: '0', acc: null, op: null, waiting: false })
-function openCalc() { calc.open = true; calcClear() }
-function closeCalc() { calc.open = false }
-function calcInput(d) {
-  if (calc.waiting) { calc.display = d; calc.waiting = false }
-  else { calc.display = calc.display === '0' ? d : calc.display + d }
-  if (calc.display.length > 14) calc.display = calc.display.slice(0, 14)
-}
-function calcDot() {
-  if (calc.waiting) { calc.display = '0.'; calc.waiting = false }
-  else if (!calc.display.includes('.')) calc.display += '.'
-}
-function calcOp(op) {
-  const v = parseFloat(calc.display)
-  if (calc.acc !== null && !calc.waiting) {
-    const r = calcEval(calc.acc, v, calc.op)
-    calc.display = calcTrim(r); calc.acc = r
-  } else { calc.acc = v }
-  calc.op = op; calc.waiting = true
-}
-function calcEval(a, b, op) {
-  if (op === '+') return a + b
-  if (op === '-') return a - b
-  if (op === '×') return a * b
-  if (op === '÷') return b === 0 ? NaN : a / b
-  return b
-}
-function calcEqual() {
-  if (calc.op == null) return
-  const r = calcEval(calc.acc, parseFloat(calc.display), calc.op)
-  calc.display = calcTrim(r); calc.acc = null; calc.op = null; calc.waiting = true
-}
-function calcPercent() { calc.display = calcTrim(parseFloat(calc.display) / 100) }
-function calcNeg() { calc.display = calc.display.startsWith('-') ? calc.display.slice(1) : (calc.display === '0' ? '0' : '-' + calc.display) }
-function calcBackspace() {
-  if (calc.waiting) return
-  calc.display = calc.display.length > 1 ? calc.display.slice(0, -1) : '0'
-}
-function calcClear() { calc.display = '0'; calc.acc = null; calc.op = null; calc.waiting = false }
-function calcTrim(n) {
-  if (typeof n !== 'number' || isNaN(n)) return '错误'
-  if (!isFinite(n)) return '∞'
-  return String(Math.round(n * 1e12) / 1e12)
-}
-function onCalcKey(e) {
-  if (!calc.open) return
-  const t = e.target
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
-  const k = e.key
-  if (k >= '0' && k <= '9') { e.preventDefault(); calcInput(k); return }
-  if (k === '.') { e.preventDefault(); calcDot(); return }
-  if (k === '+') { e.preventDefault(); calcOp('+'); return }
-  if (k === '-') { e.preventDefault(); calcOp('-'); return }
-  if (k === '*') { e.preventDefault(); calcOp('×'); return }
-  if (k === '/') { e.preventDefault(); calcOp('÷'); return }
-  if (k === '%') { e.preventDefault(); calcPercent(); return }
-  if (k === 'Enter' || k === '=') { e.preventDefault(); calcEqual(); return }
-  if (k === 'Backspace') { e.preventDefault(); calcBackspace(); return }
-  if (k === 'Escape') { e.preventDefault(); closeCalc(); return }
-  if (k === 'Delete' || k === 'C' || k === 'c') { e.preventDefault(); calcClear(); return }
-}
-
-const now = ref(new Date())
-let clockTimer = null
-function pad(n) { return n < 10 ? '0' + n : '' + n }
-const nowStr = computed(() => {
-  const d = now.value
-  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}（${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}）`
-})
-
-const weather = ref(null)
-const weatherErr = ref('')
-const weatherText = ref('')
-const WMO = { 0: '晴', 1: '大致晴朗', 2: '多云', 3: '阴天', 45: '有雾', 48: '雾凇', 51: '毛毛雨', 53: '小雨', 55: '细雨', 61: '小雨', 63: '中雨', 65: '大雨', 71: '小雪', 73: '中雪', 75: '大雪', 80: '阵雨', 81: '强阵雨', 82: '暴雨', 95: '雷暴', 96: '雷暴伴冰雹', 99: '强雷暴' }
-const WMO_ICON = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '🌨️', 73: '🌨️', 75: '❄️', 80: '🌦️', 81: '🌧️', 82: '⛈️', 95: '⛈️', 96: '⛈️', 99: '⛈️' }
-const weatherIcon = computed(() => WMO_ICON[weather.value?.code] ?? '🌤️')
-async function loadWeather() {
-  try {
-    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.59&longitude=114.30&current_weather=true&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=Asia/Shanghai')
-    const data = await res.json()
-    const w = data.current_weather
-    weather.value = { temp: Math.round(w.temperature), wind: Math.round(w.windspeed), code: w.weathercode, max: Math.round(data.daily.temperature_2m_max[0]), min: Math.round(data.daily.temperature_2m_min[0]) }
-    weatherText.value = WMO[w.weathercode] ?? `天气码 ${w.weathercode}`
-  } catch (e) { weatherErr.value = '天气获取失败' }
-}
-const aqi = ref(null)
-function aqiInfo(v) {
-  if (v == null) return null
-  if (v <= 50) return { label: '优', color: '#22c55e' }
-  if (v <= 100) return { label: '良', color: '#eab308' }
-  if (v <= 150) return { label: '轻度污染', color: '#f97316' }
-  if (v <= 200) return { label: '中度污染', color: '#ef4444' }
-  if (v <= 300) return { label: '重度污染', color: '#a855f7' }
-  return { label: '严重污染', color: '#b91c1c' }
-}
-const aqiComputed = computed(() => aqiInfo(aqi.value))
-async function loadAQI() {
-  try {
-    const res = await fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=30.59&longitude=114.30&current=us_aqi&timezone=Asia/Shanghai')
-    const data = await res.json()
-    aqi.value = Math.round(data.current.us_aqi)
-  } catch (e) { aqi.value = null }
-}
-const speedResult = ref('监测中…')
-const sampling = ref(false)
-let speedTimer = null
-function fmtSpeed(bps) {
-  if (bps >= 1e6) return (bps / 1e6).toFixed(1) + ' MB/s'
-  if (bps >= 1e3) return (bps / 1e3).toFixed(0) + ' KB/s'
-  return bps.toFixed(0) + ' B/s'
-}
-async function sampleSpeed() {
-  if (sampling.value) return
-  sampling.value = true
-  const bytes = 1 * 1024 * 1024
-  const url = `https://speed.cloudflare.com/__down?bytes=${bytes}`
-  try {
-    const start = performance.now()
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok || !res.body) throw new Error('HTTP ' + res.status)
-    const reader = res.body.getReader()
-    let received = 0
-    for (;;) { const { done, value } = await reader.read(); if (done) break; received += value.byteLength }
-    const secs = (performance.now() - start) / 1000
-    if (secs <= 0) throw new Error('计时异常')
-    speedResult.value = fmtSpeed((received * 8) / secs)
-  } catch (e) { speedResult.value = '监测中断' }
-  finally { sampling.value = false }
-}
-
-let agent = null
-/* 凭据从 .env 读取（.env 不入库，密钥脱敏） */
-const APP_ID = import.meta.env.VITE_APP_ID || ''
-const APP_SECRET = import.meta.env.VITE_APP_SECRET || ''
-const GATEWAY = import.meta.env.VITE_GATEWAY || 'https://nebula-agent.xingyun3d.com/user/v1/ttsa_v2/session'
-
-let audioCtx = null
-function ensureAudio() {
-  if (!audioCtx) {
-    const AC = window.AudioContext || window.webkitAudioContext
-    if (AC) audioCtx = new AC()
-  }
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
-}
-function playAlarmSound(times = 3) {
-  if (!audioCtx) return
-  const notes = [523.25, 659.25, 783.99, 1046.5]
-  let idx = 0
-  const total = times * notes.length
-  const step = () => {
-    if (idx >= total) return
-    const f = notes[idx % notes.length]
-    const t = audioCtx.currentTime
-    const osc = audioCtx.createOscillator()
-    const gain = audioCtx.createGain()
-    osc.type = 'sine'
-    osc.frequency.value = f
-    gain.gain.setValueAtTime(0.001, t)
-    gain.gain.exponentialRampToValueAtTime(0.4, t + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18)
-    osc.connect(gain).connect(audioCtx.destination)
-    osc.start(t); osc.stop(t + 0.2)
-    idx++; setTimeout(step, 220)
-  }
-  step()
-}
-
-const alarm = reactive({ open: false, hours: 0, minutes: 5, seconds: 0, total: 5 * 60, remain: 5 * 60, running: false, ringing: false })
-let alarmTimer = null
-function openAlarm() { alarm.open = true; alarm.ringing = false }
-function openAlarmFromHome() { view.value = 'components'; alarm.open = true }
-function closeAlarm() { alarm.open = false; if (alarm.ringing) alarm.ringing = false }
-function adjust(unit, delta) {
-  if (alarm.running) return
-  if (unit === 'h') alarm.hours = (alarm.hours + delta + 24) % 24
-  if (unit === 'm') alarm.minutes = (alarm.minutes + delta + 60) % 60
-  if (unit === 's') alarm.seconds = (alarm.seconds + delta + 60) % 60
-  syncTotal()
-}
-function syncTotal() { alarm.total = alarm.hours * 3600 + alarm.minutes * 60 + alarm.seconds; if (alarm.total <= 0) alarm.total = 1; alarm.remain = alarm.total }
-function startAlarm() { ensureAudio(); syncTotal(); alarm.remain = alarm.total; alarm.ringing = false; alarm.running = true; runAlarmTimer() }
-function togglePause() {
-  if (alarm.ringing) { resetAlarm(); return }
-  if (alarm.running) { stopAlarmTimer(); alarm.running = false }
-  else { ensureAudio(); alarm.running = true; runAlarmTimer() }
-}
-function runAlarmTimer() {
-  alarmTimer = setInterval(() => {
-    alarm.remain--
-    if (alarm.remain <= 0) {
-      alarm.remain = 0; alarm.running = false; stopAlarmTimer(); alarm.ringing = true
-      playAlarmSound()
-      try { agent?.speak('时间到啦，该休息一下啦～') } catch (e) {}
-    }
-  }, 1000)
-}
-function resetAlarm() { stopAlarmTimer(); alarm.running = false; alarm.ringing = false; alarm.hours = 0; alarm.minutes = 5; alarm.seconds = 0; syncTotal() }
-function stopAlarmTimer() { if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = null } }
-function fmtRemain(s) { const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const sec = s % 60; return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}` }
-const ringStyle = computed(() => { const circ = 2 * Math.PI * 52; const progress = alarm.total > 0 ? alarm.remain / alarm.total : 0; return { strokeDashoffset: circ * (1 - progress) } })
-
-/* ============ 开场白 ============ */
-const GREETING = '嘻嘻，你好呀朋友，我叫熠墨雨，是你的学习伙伴和倾听者，很高兴认识你！'
-let greetTimer = null
-function speakGreeting() {
-  if (!agent) return
-  if (agent.getAgentState() !== 'running') return
-  clearTimeout(greetTimer)
-  greetTimer = setTimeout(() => {
-    if (agent.getAgentState() === 'running') { try { agent.speak(GREETING) } catch (e) {} }
-  }, 4000)
-}
-
+/* ============ 生命周期：启动 / 清理 ============ */
 onMounted(async () => {
-  loadTasks()
-  clockTimer = setInterval(() => { now.value = new Date() }, 1000)
-  loadWeather(); loadAQI(); sampleSpeed()
-  speedTimer = setInterval(sampleSpeed, 1000)
-  window.addEventListener('keydown', onCalcKey)
-
-  await nextTick()
-  const container = document.getElementById('avatar-container')
-  if (!container) { pushSys('容器不存在：检查 <div id="avatar-container"> 是否在模板'); return }
-  agent = new XingyunAvatarAgent({
-    container,
-    appId: APP_ID,
-    appSecret: APP_SECRET,
-    gatewayServer: GATEWAY,
-    onMessage(error) { pushSys(`[SDK ${error.code}] ${error.message}`) },
-    agentCallbacks: {
-      onAgentStateChange(s) {
-        const wasRunning = running.value
-        running.value = s === 'running'
-        stateText.value = `Agent: ${s}`
-        if (s === 'running') speakGreeting()
-        if (!wasRunning && s === 'running' && listening.value) { agent?.startASR() }
-      },
-      onASRStateChange(s) { listening.value = s === 'listening'; micText.value = listening.value ? '停止说话' : '开始说话' },
-      onASRResult(r) { if (r.isFinal) rememberAuto(r.text) },
-      onLLMResponse: handleLLM,
-      onError(error) { pushSys(`[${error.domain}] ${error.code}: ${error.message}`) },
-    },
-  })
-  await agent.init()
-  window.__agent = agent
-  if (agent.getAgentState() === 'running') speakGreeting()
-  else pushSys('初始化未进入 running，请看上方报错')
+  tasksApi.loadTasks()
+  clockApi.start()
+  weatherApi.loadWeather(); weatherApi.loadAQI()
+  speedApi.start()
+  calcApi.bind()
+  await avatar.initAvatar()
 })
-
-async function toggleMic() { ensureAudio(); if (listening.value) await agent.stopASR(); else await agent.startASR() }
-async function sendAsk() {
-  ensureAudio()
-  if (!running.value || !inputText.value) return
-  const text = inputText.value
-  inputText.value = ''
-  rememberAuto(text)
-  const payload = carryMemory.value ? buildContext() + text : text
-  try { await agent.ask(payload) } catch (e) {}
-}
-function onInterrupt() { ensureAudio(); try { agent.interrupt() } catch (e) {} }
-function reloadPage() { window.location.reload() }
 
 onBeforeUnmount(() => {
-  if (clockTimer) clearInterval(clockTimer)
-  if (speedTimer) clearInterval(speedTimer)
-  if (greetTimer) clearTimeout(greetTimer)
-  stopAlarmTimer()
-  window.removeEventListener('keydown', onCalcKey)
-  try { agent?.destroy() } catch (e) {}
+  clockApi.stop()
+  speedApi.stop()
+  avatar.stopGreet()
+  alarmApi.stop()
+  calcApi.unbind()
+  avatar.destroy()
 })
 </script>
 

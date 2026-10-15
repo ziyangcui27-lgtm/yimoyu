@@ -67,8 +67,18 @@ docker compose up -d --build
 ```
 yimoyu/
 ├── src/
-│   ├── App.vue            # 主应用（界面 + 逻辑）
+│   ├── App.vue            # 主应用（界面组装，逻辑按模块拆分）
 │   ├── main.js            # 入口
+│   └── composables/       # 可维护的功能模块（组合式函数）
+│       ├── useAvatar.js   # 数字人 Agent + 对话兜底 + 公式展示
+│       ├── useAlarm.js    # 闹钟 + 到点铃声/语音
+│       ├── useMemory.js   # 记忆 + 上下文拼接
+│       ├── useTasks.js    # 任务 + localStorage 持久化
+│       ├── useCalc.js     # 计算器（鼠标 + 键盘）
+│       ├── useWeather.js  # 天气 + 空气质量
+│       ├── useSpeed.js    # 实时网速
+│       ├── useClock.js    # 时钟
+│       └── audio.js       # 共享音频上下文
 ├── public/                # 静态资源
 ├── .env.example           # 环境变量模板
 ├── .gitignore
