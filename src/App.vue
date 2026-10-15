@@ -402,18 +402,18 @@ function stripSelfClaim(text) {
   if (m) return text.slice(text.indexOf(m[0]) + m[0].length).trim()
   return ''
 }
-// 把公式/特殊符号转成口语或去掉，避免平台 LaTeX 报错
+// 把公式/特殊符号转成口语或去掉，避免平台 LaTeX / SSML 标签报错（[SDK 2404]）
 function speakClean(t) {
-  return t
+  let s = t
     .replace(/\$\$[\s\S]*?\$\$/g, ' ')
     .replace(/\\\[[\s\S]*?\\\]/g, ' ')
     .replace(/\\\([\s\S]*?\\\)/g, ' ')
-    .replace(/\$[^$\n]{1,60}\$/g, ' ')
+    .replace(/\$[^$\n]{1,160}\$/g, ' ')
     .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '（$1 分之 $2）')
-    .replace(/\\(?:mathrm|text|operatorname)\{([^}]*)\}/g, '$1')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
-    .slice(0, 600)
+    .replace(/\\[a-zA-Z]+\{[^}]*\}/g, ' ')
+    .replace(/\\[a-zA-Z]+/g, ' ')
+    .replace(/[{}\\]/g, ' ')
+  return s.replace(/[ \t]{2,}/g, ' ').trim().slice(0, 600)
 }
 function handleLLM(resp) {
   if (resp.isFirst) { llmBuffer = ''; fixing = false; aiAnswer.value = '' }
