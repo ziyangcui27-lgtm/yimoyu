@@ -6,8 +6,8 @@ import 'katex/dist/katex.min.css'
 import { ensureAudio } from './audio'
 
 // 数字人模块：星云 Agent 初始化、对话接收 + 兜底清洗、AI 文字/公式展示、开场白、语音交互。
-// 依赖注入：carryMemory(ref)、buildContext(fn)、rememberAuto(fn)、pushSys(fn)
-export function useAvatar({ carryMemory, buildContext, rememberAuto, pushSys }) {
+// 依赖注入：carryMemory(ref)、buildContext(fn)、pushSys(fn)
+export function useAvatar({ carryMemory, buildContext, pushSys }) {
   const running = ref(false)
   const listening = ref(false)
   const micText = ref('开始说话')
@@ -135,7 +135,7 @@ export function useAvatar({ carryMemory, buildContext, rememberAuto, pushSys }) 
           if (!wasRunning && s === 'running' && listening.value) { inst?.startASR() }
         },
         onASRStateChange(s) { listening.value = s === 'listening'; micText.value = listening.value ? '停止说话' : '开始说话' },
-        onASRResult(r) { if (r.isFinal) rememberAuto(r.text) },
+        onASRResult() { /* 对话不入记忆：仅手动添加的记忆才会被读取（各过各的） */ },
         onLLMResponse: handleLLM,
         onError(error) { pushSys(`[${error.domain}] ${error.code}: ${error.message}`) },
       },
@@ -155,7 +155,6 @@ export function useAvatar({ carryMemory, buildContext, rememberAuto, pushSys }) 
     if (!running.value || !inputText.value) return
     const text = inputText.value
     inputText.value = ''
-    rememberAuto(text)
     let payload = text
     if (carryMemory.value) {
       const ctx = buildContext()

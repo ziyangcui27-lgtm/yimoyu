@@ -366,7 +366,6 @@ const tasksApi = useTasks()
 const avatar = useAvatar({
   carryMemory: mem.carryMemory,
   buildContext: mem.buildContext,
-  rememberAuto: mem.rememberAuto,
   pushSys,
 })
 const alarmApi = useAlarm({ speak: (msg) => avatar.agent.value?.speak(msg) })
