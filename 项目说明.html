@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>项目说明 · 熠墨雨（Yimoyu）</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #1f2b24; line-height: 1.75; margin: 40px auto; max-width: 780px; padding: 0 20px; }
+  h1 { font-size: 26px; color: #37a76c; border-bottom: 3px solid #37a76c; padding-bottom: 10px; }
+  h2 { font-size: 19px; color: #2f7d54; margin-top: 28px; }
+  h3 { font-size: 16px; color: #26352f; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #cde5d5; padding: 8px 12px; text-align: left; font-size: 14px; }
+  th { background: #e9f4ee; }
+  blockquote { border-left: 4px solid #37a76c; margin: 16px 0; padding: 6px 16px; background: #f4faf6; color: #2f4038; }
+  code { background: #f0f7f2; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .foot { margin-top: 36px; padding-top: 14px; border-top: 1px solid #d7e7dd; font-size: 13px; color: #6b8a7d; }
+</style>
+</head>
+<body>
+<h1>项目说明 · 熠墨雨（Yimoyu）</h1>
+<p style="font-size:16px;color:#6b8a7d;"><em>让「AI 活起来」 · 温柔倾听、教育陪伴的具身 AI 学伴</em></p>
+
+<h2>一、项目简介</h2>
+<p><strong>熠墨雨</strong> 是一款运行在网页端的 AI 具身学伴应用。她以温柔、耐心、懂教育的女性数字人形象出现，通过语音与文字和用户自然交流，是"陪在身边、随叫随到"的学习伙伴与倾听者。</p>
+<p>项目基于 <strong>Vue 3 + Vite + 魔珐星云 XingyunAvatarAgent SDK（@xmov/avatar 2.4.1）</strong> 构建，纯前端 SPA，可本地运行，也可 Docker 容器化一键部署。</p>
+
+<h2>二、场景创意价值</h2>
+<p>面向学生与需要陪伴的人群，熠墨雨解决的核心问题有三：</p>
+<ol>
+  <li><strong>学习陪伴缺失</strong>：提供一位温柔、有耐心的数字人学伴，鼓励学生提问、倾听烦恼，缓解学习焦虑。</li>
+  <li><strong>实用工具一体化</strong>：记忆、任务、闹钟、计算器、天气、网速等生活小工具与对话无缝集成，一站式陪伴。</li>
+  <li><strong>让 AI「活」起来</strong>：具身形象 + 自然语音 + 真人设，摆脱"工具感"，让 AI 成为有温度的伙伴。</li>
+</ol>
+
+<h2>三、技术实现</h2>
+<table>
+  <tr><th>维度</th><th>实现</th></tr>
+  <tr><td>数字人</td><td>魔珐星云具身 SDK，语音问答 + 文字问答</td></tr>
+  <tr><td>前端框架</td><td>Vue 3（Composition API）+ Vite</td></tr>
+  <tr><td>智能交互</td><td>流式 LLM 文本接入（onLLMResponse）、ASR 语音识别、TTS 语音播报</td></tr>
+  <tr><td>数据持久化</td><td>localStorage（任务 / 记忆）</td></tr>
+  <tr><td>外部数据</td><td>Open-Meteo（天气 / AQI）、Cloudflare（网速采样）</td></tr>
+  <tr><td>稳健性</td><td>自称兜底、公式清洗、空响应兜底、密钥脱敏</td></tr>
+  <tr><td>部署</td><td>多阶段 Docker 镜像，nginx 静态托管</td></tr>
+</table>
+
+<h2>四、产品完成度</h2>
+<p>已实现并可稳定运行的核心能力：</p>
+<ul>
+  <li>数字人对话（语音 + 文字）</li>
+  <li>记忆系统（自动 + 手动，星标优先，携带上下文）</li>
+  <li>任务系统（清单 + 步骤 + 日期，右侧面板）</li>
+  <li>闹钟（计时 + 到点语音提醒）</li>
+  <li>计算器（键盘 + 鼠标）</li>
+  <li>天气 / AQI / 网速实时监测</li>
+  <li>深色模式、刷新重连、自称兜底等细节打磨</li>
+</ul>
+
+<h2>五、开源规范</h2>
+<ul>
+  <li>采用 MIT 开源许可证</li>
+  <li>凭据经 <code>.env</code> 读取，<code>.env</code> 不入库，密钥脱敏</li>
+  <li>提供 <code>README</code>、<code>Dockerfile</code>、<code>docker-compose.yml</code>、<code>.gitignore</code></li>
+  <li>支持一键容器化部署，降低复现门槛</li>
+</ul>
+
+<h2>六、演示说明</h2>
+<p>见配套《演示录屏脚本》，按脚本录制 3–5 分钟演示即可覆盖核心亮点。</p>
+
+<div class="foot">
+  <p>投递赛事：Oschina 2026「让 AI『活』起来」 · 邀请码：XJKA436Y6J</p>
+</div>
+</body>
+</html>
