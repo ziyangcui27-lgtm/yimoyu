@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@xmov/avatar": "^2.4.1",
+    "katex": "^0.19.0",
+    "marked": "^18.1.1",
     "vue": "^3.5.42"
   },
   "devDependencies": {

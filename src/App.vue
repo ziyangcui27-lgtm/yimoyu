@@ -49,6 +49,7 @@
           <div class="frame"><div id="avatar-container"></div></div>
         </main>
         <section class="chat">
+          <div v-if="aiAnswer" class="ai-answer" v-html="renderContent(aiAnswer)"></div>
           <p v-for="(t, i) in sysMsgs" :key="'s' + i" class="msg sys">{{ t }}</p>
         </section>
         <footer class="dock">
@@ -337,6 +338,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import XingyunAvatarAgent from '@xmov/avatar/agent'
+import { marked } from 'marked'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 const view = ref('home')
 const stateText = ref('初始化中…')
@@ -351,6 +355,28 @@ const taskPanelOpen = ref(false)
 /* ============ 系统提示（仅灰字，无气泡） ============ */
 const sysMsgs = reactive([])
 function pushSys(line) { sysMsgs.push(line); if (sysMsgs.length > 20) sysMsgs.shift() }
+
+/* ============ AI 文字/公式回答展示区（语音外的文字交流） ============
+   语音播报只能念文本，公式等非文本内容在这里以 Markdown + LaTeX 渲染出来。 */
+const aiAnswer = ref('')
+// 行间公式 $$...$$ / \[...\] → 块级 KaTeX；行内公式 \(...\) 与 $...$ → 行内 KaTeX；其余走 Markdown
+function renderContent(t) {
+  if (!t) return ''
+  let out = t
+  out = out.replace(/\$\$([\s\S]+?)\$\$/g, (_, m) => {
+    try { return `<div class="math-block">${katex.renderToString(m, { displayMode: true, throwOnError: false, strict: false })}</div>` } catch (e) { return _ }
+  })
+  out = out.replace(/\\\[([\s\S]+?)\\\]/g, (_, m) => {
+    try { return `<div class="math-block">${katex.renderToString(m, { displayMode: true, throwOnError: false, strict: false })}</div>` } catch (e) { return _ }
+  })
+  out = out.replace(/\\\(([\s\S]+?)\\\)/g, (_, m) => {
+    try { return `<span class="math-inline">${katex.renderToString(m, { throwOnError: false, strict: false })}</span>` } catch (e) { return _ }
+  })
+  out = out.replace(/\$([^$\n]{1,80})\$/g, (_, m) => {
+    try { return `<span class="math-inline">${katex.renderToString(m, { throwOnError: false, strict: false })}</span>` } catch (e) { return _ }
+  })
+  return marked.parse(out)
+}
 
 /* ============ 兜底机制：减少崩坏、提高质量 ============
    1. 自称拦截：只在回答开头（可带问候词）自称豆包/AI助手时触发；
@@ -390,9 +416,12 @@ function speakClean(t) {
     .slice(0, 600)
 }
 function handleLLM(resp) {
-  if (resp.isFirst) { llmBuffer = ''; fixing = false }
+  if (resp.isFirst) { llmBuffer = ''; fixing = false; aiAnswer.value = '' }
   if (resp.text) {
     llmBuffer += resp.text
+    // 展示区：去自称、保留公式原文（不清洗公式，供阅读）
+    const shown = stripSelfClaim(llmBuffer)
+    aiAnswer.value = shown || (isSelfClaimStart(llmBuffer) ? FIXED_SELF : llmBuffer)
     if (!fixing && isSelfClaimStart(llmBuffer)) {
       fixing = true
       try { agent?.interrupt() } catch (e) {}
@@ -946,9 +975,17 @@ onBeforeUnmount(() => {
   transition: transform 0.35s ease, background 0.4s ease;
 }
 .body.chat-open #avatar-container { transform: translateX(-7%) scale(1.14); }
-.chat { padding: 10px 8px 8px; max-height: 130px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.chat { padding: 10px 8px 8px; max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .msg { margin: 2px 0; font-size: 12px; color: var(--sys-text); padding: 2px 4px; }
 .msg.sys { align-self: center; text-align: center; }
+.ai-answer { align-self: stretch; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; line-height: 1.75; color: var(--text-main); word-break: break-word; }
+.ai-answer p { margin: 6px 0; }
+.ai-answer p:first-child { margin-top: 0; }
+.ai-answer p:last-child { margin-bottom: 0; }
+.ai-answer .math-block { text-align: center; margin: 8px 0; overflow-x: auto; padding: 2px 0; }
+.ai-answer .math-inline { white-space: nowrap; }
+.ai-answer code { background: rgba(127,127,127,0.12); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+.ai-answer pre { background: rgba(127,127,127,0.10); padding: 8px 10px; border-radius: 8px; overflow-x: auto; }
 
 .dock { padding: 8px 6px 16px; }
 .input-wrap {
